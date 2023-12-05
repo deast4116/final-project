@@ -1,50 +1,63 @@
 import json
 import requests
-class bar:
-#change init and str to not include the search method as well as ask user which methods they want to use, add the ability to obtain ingredients list as well as recipie,
-    def __init__(self, drink_to_search):
-        self.api_url = f"https://www.thecocktaildb.com/api/json/v1/1/search.php?s={drink_to_search}"
-        self.drink_data_dict = requests.get(self.api_url).json()
-        self.drink_to_search = drink_to_search
+class ListBarClass:
+    def __init__(self):
+        pass
 
-    def __str__(self):
-        drinks = self.drink_data_dict['drinks']
-        if drinks:
-            return f"Drinks found in the database that match your search:'{self.drink_to_search}':\n{', '.join(drink['strDrink'] for drink in drinks)}"
-        else:
-            return f"No drinks found under the name '{self.drink_to_search}'."
-
-    def generate_random_cocktail(self):
-        random_cocktail_url = "https://www.thecocktaildb.com/api/json/v1/1/random.php"
-        random_cocktail_data = requests.get(random_cocktail_url).json()
-        cocktail = random_cocktail_data['drinks'][0] if 'drinks' in random_cocktail_data else {}
-        strDrink = cocktail.get('strDrink', "Unknown Drink")
-        return f"Generated Drink: {strDrink}"
-
-        "Encountered a significant problem here that's entirely out of my control."
-        "The database on occasion will return a drink that has yet to be finished resulting in- "
-        "An error. I made a way around it however this still shouldn't be possible and was frustrating to work around"
-
-
-    def list_cocktails_by_letter(self, letter):
+    def list_drinks_by_letter(self):
+        letter = input("Enter the first letter of a cocktail: ")
         search_url = f"https://www.thecocktaildb.com/api/json/v1/1/search.php?f={letter}"
         search_data = requests.get(search_url).json()
         drinks = search_data.get('drinks', [])
         drink_names = [drink['strDrink'] for drink in drinks]
         return drink_names
 
+    def list_drinks_by_ingredient(self):
+        ingredient = input("Enter an ingredient: ")
+        search_url = f"https://www.thecocktaildb.com/api/json/v1/1/filter.php?i={ingredient}"
+        search_data = requests.get(search_url).json()
+        drinks = search_data.get('drinks', [])
+        drink_names = [drink['strDrink'] for drink in drinks]
+        return drink_names
+
+
+class SearchBarClass:
+    def __init__(self):
+        pass
+
+    def search_all_drinks(self):
+        drink_name = input("Enter the name of the drink: ")
+        search_url = f"https://www.thecocktaildb.com/api/json/v1/1/search.php?s={drink_name}"
+        search_data = requests.get(search_url).json()
+        drinks = search_data.get('drinks', [])
+        if drinks:
+            drink = drinks[0]
+            ingredients = [drink.get(f'strIngredient{i}', '') for i in range(1, 16) if drink.get(f'strIngredient{i}', '')]
+            return f"Drink: {drink['strDrink']}\nIngredients: {', '.join(ingredients)}"
+        else:
+            return "Drink not found."
+
+    def generate_random_drink(self):
+        random_cocktail_url = "https://www.thecocktaildb.com/api/json/v1/1/random.php"
+        random_cocktail_data = requests.get(random_cocktail_url).json()
+        cocktail = random_cocktail_data['drinks'][0] if 'drinks' in random_cocktail_data else {}
+        strDrink = cocktail.get('strDrink', "Unknown Drink")
+        ingredients = [cocktail.get(f'strIngredient{i}', '') for i in range(1, 16) if cocktail.get(f'strIngredient{i}', '')]
+        return f"Generated Drink: {strDrink}\nIngredients: {', '.join(ingredients)}"
 
 def main():
-    drink_to_search = input("What drink are you lookin' for pardner?: ")
-    dallys_bar = bar(drink_to_search)
+    list_bar = ListBarClass()
+    search_bar = SearchBarClass()
+    drinks_by_letter = list_bar.list_drinks_by_letter()
+    print("Cocktails by letter:", drinks_by_letter)
 
-    print("I found this:")
-    print(str(dallys_bar))
-    print("Random drink of the night (or day I don't judge) is:")
-    print(dallys_bar.generate_random_cocktail())
+    drinks_by_ingredient = list_bar.list_drinks_by_ingredient()
+    print("Cocktails by ingredient:", drinks_by_ingredient)
 
-    letter = input("Enter the first letter of a cocktail yer' lookin' for to see if we have it: ")
-    print("Cocktails by that letter are:")
-    print(dallys_bar.list_cocktails_by_letter(letter))
+    searched_drink = search_bar.search_all_drinks()
+    print(searched_drink)
+
+    random_drink = search_bar.generate_random_drink()
+    print(random_drink)
 
 main()
