@@ -13,7 +13,7 @@ class ListBarClass:
         return drink_names
 
     def list_drinks_by_ingredient(self):
-        ingredient = input("Enter an ingredient: ")
+        ingredient = input("Enter an ingredient to search by: ")
         search_url = f"https://www.thecocktaildb.com/api/json/v1/1/filter.php?i={ingredient}"
         search_data = requests.get(search_url).json()
         drinks = search_data.get('drinks', [])
