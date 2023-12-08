@@ -1,9 +1,6 @@
 from flask import Flask, render_template_string, request
 import requests
-
 app = Flask(__name__)
-
-
 class Bar:
     def __init__(self, drink_to_search):
         self.drink_to_search = drink_to_search
@@ -44,7 +41,7 @@ class Bar:
         strDrink = cocktail.get('strDrink', "Unknown Drink")
         ingredients = [cocktail.get(f'strIngredient{i}', '') for i in range(1, 16) if
                        cocktail.get(f'strIngredient{i}', '')]
-        return f"Generated Drink: {strDrink}\nIngredients: {', '.join(ingredients)}"
+        return {'strDrink': strDrink, 'ingredients': ', '.join(ingredients)}
 
 
 html_template = """
@@ -53,13 +50,14 @@ html_template = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dafek's Abode</title>
+    <title>Matt Finnerty Foundation Bartender Tool</title>
     <style>
         body {
-            background-color: #f5f5f5;
+            background-color: #333;
             text-align: center;
             font-family: Arial, sans-serif;
-            color: #333;
+            color: #eee;
+            margin: 20px;
         }
         h1 {
             color: #007bff;
@@ -70,6 +68,18 @@ html_template = """
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-top: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+            width: 200px;
         }
         button {
             padding: 10px;
@@ -86,9 +96,22 @@ html_template = """
         .in-memory {
             margin-top: 20px;
             font-style: italic;
-            color: #555;
+            color: #ccc;
         }
         .section-title {
+            margin-top: 20px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        .result-container {
+            background-color: #444;
+            padding: 10px;
+            border-radius: 5px;
             margin-top: 20px;
         }
     </style>
@@ -120,7 +143,7 @@ html_template = """
     </div>
 
     <div class="in-memory">In loving memory of Matt Finnerty who was loathed by all</div>
-    
+
     {% if letter %}
         <h2 class="section-title">Drinks found by the query: '{{ letter }}'</h2>
         {% if cocktail_list %}
@@ -132,6 +155,20 @@ html_template = """
         {% else %}
             <p>No cocktails found with the letter '{{ letter }}'</p>
         {% endif %}
+    {% endif %}
+
+    {% if result %}
+        <div class="result-container">
+            <h2 class="section-title">{{ result['strDrink'] }}</h2>
+            <p>Ingredients: {{ result['ingredients'] }}</p>
+        </div>
+    {% endif %}
+    
+    {% if random_result %}
+        <div class="result-container">
+            <h2 class="section-title">{{ random_result['strDrink'] }}</h2>
+            <p>Ingredients: {{ random_result['ingredients'] }}</p>
+        </div>
     {% endif %}
 </body>
 </html>
@@ -161,8 +198,8 @@ def search():
 @app.route('/random', methods=['POST'])
 def random():
     dallys_bar = Bar('')
-    result = dallys_bar.generate_random_cocktail()
-    return render_template_string(html_template, letter='', cocktail_list=[result])
+    random_result = dallys_bar.generate_random_cocktail()
+    return render_template_string(html_template, letter='', cocktail_list=[], result={}, random_result=random_result)
 
 @app.route('/')
 def index():
