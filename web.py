@@ -94,7 +94,7 @@ html_template = """
     </style>
 </head>
 <body>
-    <h1>Welcome to Dafek's Abode</h1>
+    <h1>The Matt Finnerty Foundation Bartender Tool</h1>
     <div class="button-container">
         <form method="post" action="/list_by_letter">
             <label for="letter">Enter the first letter of a cocktail:</label>
@@ -119,7 +119,7 @@ html_template = """
         </form>
     </div>
 
-    <div class="in-memory">In loving memory of Matt Finnerty</div>
+    <div class="in-memory">In loving memory of Matt Finnerty who was loathed by all</div>
     
     {% if letter %}
         <h2 class="section-title">Drinks found by the query: '{{ letter }}'</h2>
