@@ -1,48 +1,75 @@
 from flask import Flask, render_template_string, request
 import requests
+
 app = Flask(__name__)
-class Bar:
-    def __init__(self, drink_to_search):
-        self.drink_to_search = drink_to_search
+
+class CocktailDB:
+    def __init__(self):
+        self.base_url = "https://www.thecocktaildb.com/api/json/v1/1"
 
     def list_cocktails_by_letter(self, letter):
-        search_url = f"https://www.thecocktaildb.com/api/json/v1/1/search.php?f={letter}"
-        search_data = requests.get(search_url).json()
-        if 'drinks' in search_data:
-            drinks = search_data['drinks']
-            drink_names = [drink['strDrink'] for drink in drinks]
-            return drink_names
-        else:
-            return []
+        search_url = f"{self.base_url}/search.php?f={letter}"
+        return self._get_cocktail_names(search_url)
 
     def list_cocktails_by_ingredient(self, ingredient):
-        search_url = f"https://www.thecocktaildb.com/api/json/v1/1/filter.php?i={ingredient}"
-        search_data = requests.get(search_url).json()
-        drinks = search_data.get('drinks', [])
-        drink_names = [drink['strDrink'] for drink in drinks]
-        return drink_names
+        search_url = f"{self.base_url}/filter.php?i={ingredient}"
+        return self._get_cocktail_names(search_url)
 
     def search_cocktail(self, drink_name):
-        search_url = f"https://www.thecocktaildb.com/api/json/v1/1/search.php?s={drink_name}"
-        search_data = requests.get(search_url).json()
-        drinks = search_data.get('drinks', [])
-        if drinks:
-            drink = drinks[0]
-            ingredients = [drink.get(f'strIngredient{i}', '') for i in range(1, 16) if
-                           drink.get(f'strIngredient{i}', '')]
-            return f"Drink: {drink['strDrink']}\nIngredients: {', '.join(ingredients)}"
-        else:
-            return "Drink not found."
+        search_url = f"{self.base_url}/search.php?s={drink_name}"
+        return self._get_cocktail_details(search_url)
 
     def generate_random_cocktail(self):
-        random_cocktail_url = "https://www.thecocktaildb.com/api/json/v1/1/random.php"
-        random_cocktail_data = requests.get(random_cocktail_url).json()
-        cocktail = random_cocktail_data['drinks'][0] if 'drinks' in random_cocktail_data else {}
+        random_cocktail_url = f"{self.base_url}/random.php"
+        return self._get_cocktail_details(random_cocktail_url)
+
+    def list_drinks_by_category(self, category):
+        search_url = f"{self.base_url}/filter.php?c={category}"
+        return self._get_cocktail_details(search_url)
+
+    def _get_cocktail_names(self, url):
+        search_data = requests.get(url).json()
+        drinks = search_data.get('drinks', [])
+        return [drink['strDrink'] for drink in drinks]
+
+    def _get_cocktail_details(self, url):
+        cocktail_data = requests.get(url).json()
+        cocktail = cocktail_data['drinks'][0] if 'drinks' in cocktail_data else {}
         strDrink = cocktail.get('strDrink', "Unknown Drink")
-        ingredients = [cocktail.get(f'strIngredient{i}', '') for i in range(1, 16) if
-                       cocktail.get(f'strIngredient{i}', '')]
+        ingredients = [cocktail.get(f'strIngredient{i}', '') for i in range(1, 16) if cocktail.get(f'strIngredient{i}', '')]
         return {'strDrink': strDrink, 'ingredients': ', '.join(ingredients)}
 
+class Bartender:
+    def list_by_letter(self, letter):
+        dallys_bar = CocktailDB()
+        cocktail_list = dallys_bar.list_cocktails_by_letter(letter)
+        return render_template_string(html_template, letter=letter, cocktail_list=cocktail_list)
+
+    def list_by_ingredient(self, ingredient):
+        dallys_bar = CocktailDB()
+        cocktail_list = dallys_bar.list_cocktails_by_ingredient(ingredient)
+        return render_template_string(html_template, letter=ingredient, cocktail_list=cocktail_list)
+
+    def search(self, drink_name):
+        dallys_bar = CocktailDB()
+        result = dallys_bar.search_cocktail(drink_name)
+        return render_template_string(html_template, letter=drink_name, cocktail_list=[result])
+
+    def random(self):
+        dallys_bar = CocktailDB()
+        random_result = dallys_bar.generate_random_cocktail()
+        return render_template_string(html_template, letter='', cocktail_list=[], result={}, random_result=random_result)
+
+    def list_by_category(self, category):
+        dallys_bar = CocktailDB()
+        cocktail_list = dallys_bar.list_drinks_by_category(category)
+        return render_template_string(html_template, letter=category, cocktail_list=cocktail_list)
+
+    def create_custom_cocktail(self):
+        custom_name = request.form["custom_name"]
+        custom_ingredients = request.form.getlist("custom_ingredient")
+        custom_result = {'strDrink': custom_name, 'ingredients': ', '.join(custom_ingredients)}
+        return render_template_string(html_template, letter='', cocktail_list=[], result={}, random_result={}, custom_result=custom_result)
 
 html_template = """
 <!DOCTYPE html>
@@ -140,6 +167,16 @@ html_template = """
         <form method="post" action="/random">
             <button type="submit">Generate Random Drink</button>
         </form>
+        
+        <form method="post" action="/list_by_category">
+            <label for="category">Enter a category to search by:</label>
+            <input type="text" id="category" name="category" required>
+            <button type="submit">List by Category</button>
+        </form>
+
+        <form method="post" action="/create_custom_cocktail">
+            <button type="submit">Create Custom Cocktail</button>
+        </form>
     </div>
 
     <div class="in-memory">In loving memory of Matt Finnerty who was loathed by all</div>
@@ -163,7 +200,7 @@ html_template = """
             <p>Ingredients: {{ result['ingredients'] }}</p>
         </div>
     {% endif %}
-    
+
     {% if random_result %}
         <div class="result-container">
             <h2 class="section-title">{{ random_result['strDrink'] }}</h2>
@@ -173,33 +210,39 @@ html_template = """
 </body>
 </html>
 """
-
 @app.route('/list_by_letter', methods=['POST'])
 def list_by_letter():
     letter = request.form['letter']
-    dallys_bar = Bar(letter)
-    cocktail_list = dallys_bar.list_cocktails_by_letter(letter)
-    return render_template_string(html_template, letter=letter, cocktail_list=cocktail_list)
+    bartender = Bartender()
+    return bartender.list_by_letter(letter)
 
 @app.route('/list_by_ingredient', methods=['POST'])
 def list_by_ingredient():
     ingredient = request.form['ingredient']
-    dallys_bar = Bar('')
-    cocktail_list = dallys_bar.list_cocktails_by_ingredient(ingredient)
-    return render_template_string(html_template, letter=ingredient, cocktail_list=cocktail_list)
+    bartender = Bartender()
+    return bartender.list_by_ingredient(ingredient)
 
 @app.route('/search', methods=['POST'])
 def search():
     drink_name = request.form['drink_name']
-    dallys_bar = Bar('')
-    result = dallys_bar.search_cocktail(drink_name)
-    return render_template_string(html_template, letter=drink_name, cocktail_list=[result])
+    bartender = Bartender()
+    return bartender.search(drink_name)
 
 @app.route('/random', methods=['POST'])
 def random():
-    dallys_bar = Bar('')
-    random_result = dallys_bar.generate_random_cocktail()
-    return render_template_string(html_template, letter='', cocktail_list=[], result={}, random_result=random_result)
+    bartender = Bartender()
+    return bartender.random()
+
+@app.route('/list_by_category', methods=['POST'])
+def list_by_category():
+    category = request.form['category']
+    bartender = Bartender()
+    return bartender.list_by_category(category)
+
+@app.route('/create_custom_cocktail', methods=['POST'])
+def create_custom_cocktail():
+    bartender = Bartender()
+    return bartender.create_custom_cocktail()
 
 @app.route('/')
 def index():

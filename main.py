@@ -59,5 +59,12 @@ def main():
 
     random_drink = search_bar.generate_random_drink()
     print(random_drink)
+def run_main():
+    list_bar = ListBarClass()
+    search_bar = SearchBarClass()
+
+    drinks_by_letter = list_bar.list_drinks_by_letter(input("Enter the first letter of a cocktail: "))
+    print("Cocktails by letter:", drinks_by_letter)
+
 
 main()
